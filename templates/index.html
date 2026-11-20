@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Model campus dependencies, simulate cascading outages and compare recovery plans."
+    />
+    <title>Campus Twin · Resilience Lab</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <span class="mark" aria-hidden="true">◈</span>
+        <div>Campus Twin<small>RESILIENCE LAB</small></div>
+      </div>
+      <nav aria-label="Workspace">
+        <button id="history-open" class="secondary">Scenario library</button
+        ><button id="model-open" class="secondary">Edit topology</button>
+      </nav>
+    </header>
+    <main>
+      <div class="intro">
+        <div>
+          <p class="eyebrow">CAMPUS OPERATIONS / SIMULATION</p>
+          <h1>Resilience workspace</h1>
+          <p>
+            Trace cascading outages and find the best recovery plan within your
+            budget.
+          </p>
+        </div>
+        <span class="tag" id="model-label">Campus model</span>
+      </div>
+      <div id="notice" hidden role="status"></div>
+      <div class="layout">
+        <section class="panel topology" aria-labelledby="topology-title">
+          <div class="panel-head">
+            <div>
+              <h2 id="topology-title">Dependency topology</h2>
+              <p>Select nodes to simulate direct outages.</p>
+            </div>
+            <button class="secondary" id="clear">Clear faults</button>
+          </div>
+          <div class="graph-wrap">
+            <div id="graph">
+              <canvas id="edges" aria-hidden="true"></canvas>
+              <div id="layers"></div>
+            </div>
+          </div>
+          <div class="legend">
+            <span><i class="online"></i>Operational</span
+            ><span><i class="direct"></i>Direct outage</span
+            ><span><i class="cascade"></i>Cascade</span
+            ><span><i class="recovered"></i>Recovered</span>
+          </div>
+        </section>
+        <aside class="panel controls">
+          <h2>Scenario setup</h2>
+          <label for="preset">Sample scenario</label
+          ><select id="preset">
+            <option value="">Choose a preset</option>
+          </select>
+          <label for="scenario-name">Scenario name</label
+          ><input id="scenario-name" maxlength="70" value="Storm disruption" />
+          <label for="budget"
+            >Repair budget
+            <output id="budget-value" for="budget">8 units</output></label
+          >
+          <input id="budget" type="range" min="0" max="50" value="8" />
+          <div id="faults"></div>
+          <button id="run" class="primary">
+            Run simulation <span aria-hidden="true">→</span>
+          </button>
+          <div class="actions">
+            <button id="save" class="secondary">Save run</button
+            ><button id="export" class="secondary">Export CSV</button>
+          </div>
+          <div class="separator"></div>
+          <label for="inspect-node">Inspect a node</label
+          ><select id="inspect-node"></select>
+          <div id="inspection" aria-live="polite">
+            <h3>Node details</h3>
+            <p>Select a node to inspect its dependencies.</p>
+          </div>
+        </aside>
+        <section class="panel results" aria-labelledby="results-title">
+          <div class="panel-head">
+            <div>
+              <h2 id="results-title">Simulation results</h2>
+              <p id="result-note">Run a scenario to compute its impact.</p>
+            </div>
+            <label class="stage"
+              >Graph view
+              <select id="stage">
+                <option value="cascade">After cascade</option>
+                <option value="recovery">After recovery</option>
+              </select></label
+            >
+          </div>
+          <div id="metrics" class="metrics"></div>
+          <div class="details">
+            <div>
+              <h3>Cascade timeline</h3>
+              <div id="waves"></div>
+            </div>
+            <div>
+              <h3>Optimal repair plan</h3>
+              <div id="plan"></div>
+              <div id="frontier"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <dialog id="model-dialog">
+      <div class="panel-head">
+        <div>
+          <h2>Topology editor</h2>
+          <p>Every dependency group needs at least one operational member.</p>
+        </div>
+        <button class="secondary close">Close</button>
+      </div>
+      <label for="model-json">Topology JSON</label
+      ><textarea id="model-json" spellcheck="false" rows="15"></textarea>
+      <p class="dialog-error" id="model-error" role="alert"></p>
+      <div class="actions">
+        <button id="model-apply" class="primary">Validate and apply</button
+        ><button id="model-reset" class="secondary">Restore sample JSON</button>
+      </div>
+    </dialog>
+    <dialog id="history-dialog">
+      <div class="panel-head">
+        <div>
+          <h2>Scenario library</h2>
+          <p>Load a saved run or compare two snapshots of the same model.</p>
+        </div>
+        <button class="secondary close">Close</button>
+      </div>
+      <div id="history"></div>
+      <button id="compare" class="primary">Compare selected runs</button>
+      <div id="comparison"></div>
+    </dialog>
+  </body>
+</html>
