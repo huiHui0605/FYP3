@@ -1,17 +1,12 @@
-"use strict";
-
-const $ = (id) => document.getElementById(id);
+import { $, element } from "./dom.js";
+import { setupBuilder } from "./builder.js";
+import { setupRehearsal } from "./rehearsal.js";
 const layers = ["Utilities", "Infrastructure", "Campus services"];
 let sample, presets, csrf, nodes, snapshot, inspected, history;
 let faults = new Set();
 let busy = false;
-
-function element(tag, content, className) {
-  const node = document.createElement(tag);
-  if (content !== undefined) node.textContent = content;
-  if (className) node.className = className;
-  return node;
-}
+let listView = window.matchMedia("(max-width: 650px)").matches;
+const stateLabels = {online: "Operational", direct: "Direct outage", cascade: "Cascade", recovered: "Recovered"};
 
 async function api(path, method = "GET", body) {
   const response = await fetch("/api/" + path, {
@@ -199,6 +194,10 @@ function state(key) {
 }
 
 function graph() {
+  $("map-wrap").hidden = listView;
+  $("asset-list").hidden = !listView;
+  $("map-view").setAttribute("aria-pressed", String(!listView));
+  $("list-view").setAttribute("aria-pressed", String(listView));
   const columns = layers.map((layer) => {
     const column = element("section", undefined, "layer");
     column.append(element("h3", layer));
@@ -208,7 +207,13 @@ function graph() {
       button.id = "node-" + node.id;
       button.title = node.name + " · " + status;
       button.setAttribute("aria-pressed", String(faults.has(node.id)));
-      button.append(element("i", undefined, status), element("span", node.name));
+      const info = element("span", undefined, "node-info");
+      info.append(element("strong", node.name), element("small", stateLabels[status]));
+      if (listView) {
+        const groups = node.requires.map((group) => group.map(name).join(" or "));
+        info.append(element("small", groups.length ? "Requires " + groups.join(" • ") : "Independent source"));
+      }
+      button.append(element("i", undefined, status), info);
       button.addEventListener("click", () => {
         inspected = node.id;
         if (faults.has(node.id)) faults.delete(node.id);
@@ -225,12 +230,13 @@ function graph() {
     }
     return column;
   });
-  $("layers").replaceChildren(...columns);
-  drawEdges();
+  (listView ? $("layers") : $("asset-list")).replaceChildren();
+  (listView ? $("asset-list") : $("layers")).replaceChildren(...columns);
+  if (!listView) drawEdges();
 }
 
 function drawEdges() {
-  if (!nodes) return;
+  if (!nodes || listView) return;
   const graphBox = $("graph").getBoundingClientRect();
   if (!graphBox.width) return;
   const canvas = $("edges");
@@ -305,6 +311,8 @@ function render() {
   $("budget-value").textContent = $("budget").value + " units";
   $("save").disabled = busy || !snapshot;
   $("export").disabled = !snapshot;
+  $("rehearse").disabled = !(snapshot?.result.schedule?.steps.length >= 2);
+  $("rehearse").title = $("rehearse").disabled ? "Run a portfolio with at least two repairs, such as Recovery drill." : "";
   $("stage").disabled = !snapshot;
   const result = snapshot?.result;
   $("metrics").replaceChildren();
@@ -568,35 +576,16 @@ async function start() {
   for (const button of document.querySelectorAll(".close")) {
     button.addEventListener("click", () => button.closest("dialog").close());
   }
-  $("model-open").addEventListener("click", () => {
-    $("model-json").value = JSON.stringify(nodes, null, 2);
-    $("model-error").textContent = "";
-    $("model-dialog").showModal();
+  setupBuilder(() => nodes, () => sample, async (draft) => {
+    const valid = new Set(draft.map((node) => node.id));
+    const next = await api("simulate", "POST", {...inputs(), nodes: draft, failures: [...faults].filter((id) => valid.has(id))});
+    applySnapshot(next, "Custom model");
+    notice("Topology validated and applied.");
   });
-  $("model-reset").addEventListener("click", () => {
-    $("model-json").value = JSON.stringify(sample, null, 2);
-  });
-  $("model-apply").addEventListener("click", async () => {
-    const button = $("model-apply");
-    button.disabled = true;
-    try {
-      const next = await api("simulate", "POST", {
-        nodes: JSON.parse($("model-json").value), failures: [], budget: Number($("budget").value),
-      });
-      nodes = next.nodes;
-      faults.clear();
-      inspected = null;
-      $("preset").value = "";
-      $("model-label").textContent = "Custom model · " + nodes.length + " nodes";
-      invalidate();
-      $("model-dialog").close();
-      notice("Topology validated and applied.");
-    } catch (error) {
-      $("model-error").textContent = error.message;
-    } finally {
-      button.disabled = false;
-    }
-  });
+  setupRehearsal(() => snapshot, (body) => api("rehearse", "POST", body));
+  for (const [id, showList] of [["map-view", false], ["list-view", true]]) {
+    $(id).addEventListener("click", () => { listView = showList; graph(); });
+  }
   $("history-open").addEventListener("click", async () => {
     try {
       await library();

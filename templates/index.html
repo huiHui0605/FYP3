@@ -10,9 +10,10 @@
     <title>Campus Twin · Resilience Lab</title>
     <link rel="icon" type="image/png" href="/static/favicon.png" />
     <link rel="stylesheet" href="/static/style.css" />
-    <script src="/static/app.js" defer></script>
+    <script type="module" src="/static/app.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#workspace">Skip to workspace</a>
     <header class="top">
       <div class="brand">
         <span class="mark" aria-hidden="true">◈</span>
@@ -23,19 +24,18 @@
         ><button id="model-open" class="secondary">Edit topology</button>
       </nav>
     </header>
-    <main>
+    <main id="workspace" tabindex="-1">
       <div class="intro">
         <div>
-          <p class="eyebrow">CAMPUS OPERATIONS / SIMULATION</p>
           <h1>Resilience workspace</h1>
           <p>
-            Trace cascading outages and find the best recovery plan within your
-            budget.
+            Trace an outage through campus services and plan the order of repairs.
           </p>
         </div>
         <span class="tag" id="model-label">Campus model</span>
       </div>
       <div id="notice" hidden role="status"></div>
+      <section id="metrics" class="metrics" aria-label="Scenario overview"></section>
       <div class="layout">
         <section class="panel topology" aria-labelledby="topology-title">
           <div class="panel-head">
@@ -45,7 +45,15 @@
             </div>
             <button class="secondary" id="clear">Clear faults</button>
           </div>
-          <div class="graph-wrap">
+          <div class="view-bar">
+            <div class="view-switch" aria-label="Topology display">
+              <button id="map-view" aria-pressed="true">Map</button>
+              <button id="list-view" aria-pressed="false">Asset list</button>
+            </div>
+            <label class="stage">Recovery stage <select id="stage"></select></label>
+          </div>
+          <div id="asset-list" hidden></div>
+          <div class="graph-wrap" id="map-wrap">
             <div id="graph">
               <canvas id="edges" aria-hidden="true"></canvas>
               <div id="layers"></div>
@@ -101,15 +109,8 @@
               <h2 id="results-title">Simulation results</h2>
               <p id="result-note">Run a scenario to compute its impact.</p>
             </div>
-            <label class="stage"
-              >Graph view
-              <select id="stage">
-                <option value="cascade">After cascade</option>
-                <option value="recovery">After recovery</option>
-              </select></label
-            >
+
           </div>
-          <div id="metrics" class="metrics"></div>
           <div class="details">
             <div>
               <h3>Cascade timeline</h3>
@@ -123,46 +124,12 @@
           </div>
           <section class="schedule" aria-labelledby="schedule-title">
             <h3 id="schedule-title">Crew schedule &amp; recovery goals</h3>
+            <button id="rehearse" class="secondary" disabled>Try a repair order</button>
             <div id="schedule-content" aria-live="polite"></div>
           </section>
         </section>
       </div>
     </main>
-    <dialog id="timing-dialog" aria-labelledby="timing-title">
-      <div class="panel-head"><div><h2 id="timing-title">Recovery assumptions</h2>
-        <p>Set repair times for one crew. Add a deadline to any service you want to track.</p></div>
-        <button class="secondary close">Close</button></div>
-      <form id="timing-form"><div id="timing-fields"></div>
-        <p id="timing-error" class="dialog-error" role="alert"></p>
-        <button class="primary">Apply and simulate</button></form>
-    </dialog>
-    <dialog id="model-dialog">
-      <div class="panel-head">
-        <div>
-          <h2>Topology editor</h2>
-          <p>Every dependency group needs at least one operational member.</p>
-        </div>
-        <button class="secondary close">Close</button>
-      </div>
-      <label for="model-json">Topology JSON</label
-      ><textarea id="model-json" spellcheck="false" rows="15"></textarea>
-      <p class="dialog-error" id="model-error" role="alert"></p>
-      <div class="actions">
-        <button id="model-apply" class="primary">Validate and apply</button
-        ><button id="model-reset" class="secondary">Restore sample JSON</button>
-      </div>
-    </dialog>
-    <dialog id="history-dialog">
-      <div class="panel-head">
-        <div>
-          <h2>Scenario library</h2>
-          <p>Load a saved run or compare two snapshots of the same model.</p>
-        </div>
-        <button class="secondary close">Close</button>
-      </div>
-      <div id="history"></div>
-      <button id="compare" class="primary">Compare selected runs</button>
-      <div id="comparison"></div>
-    </dialog>
+    {% include "dialogs.html" %}
   </body>
 </html>

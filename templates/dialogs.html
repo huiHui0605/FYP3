@@ -1,0 +1,67 @@
+<dialog id="timing-dialog" aria-labelledby="timing-title">
+  <div class="panel-head">
+    <div>
+      <h2 id="timing-title">Recovery assumptions</h2>
+      <p>
+        Set repair times for one crew. Add a deadline to any service you want to
+        track.
+      </p>
+    </div>
+    <button class="secondary close">Close</button>
+  </div>
+  <form id="timing-form">
+    <div id="timing-fields"></div>
+    <p id="timing-error" class="dialog-error" role="alert"></p>
+    <button class="primary">Apply and simulate</button>
+  </form>
+</dialog>
+<dialog id="model-dialog" aria-labelledby="model-title">
+  <div class="panel-head">
+    <div>
+      <h2 id="model-title">Topology editor</h2>
+      <p>Every dependency group needs at least one operational member.</p>
+    </div>
+    <button class="secondary close">Close</button>
+  </div>
+  <div class="view-switch">
+    <button id="builder-view" aria-pressed="true">Asset builder</button>
+    <button id="json-view" aria-pressed="false">JSON</button>
+  </div>
+  <div id="builder"></div>
+  <div id="raw-editor" hidden>
+    <label for="model-json">Topology JSON</label
+    ><textarea id="model-json" spellcheck="false" rows="15"></textarea>
+  </div>
+  <p class="dialog-error" id="model-error" role="alert"></p>
+  <div class="actions">
+    <button id="model-apply" class="primary">Validate and apply</button
+    ><button id="model-reset" class="secondary">Restore sample model</button>
+  </div>
+</dialog>
+<dialog id="history-dialog" aria-labelledby="history-title">
+  <div class="panel-head">
+    <div>
+      <h2 id="history-title">Scenario library</h2>
+      <p>Load a saved run or compare two snapshots of the same model.</p>
+    </div>
+    <button class="secondary close">Close</button>
+  </div>
+  <div id="history"></div>
+  <button id="compare" class="primary">Compare selected runs</button>
+  <div id="comparison"></div>
+</dialog>
+<dialog id="trial-dialog" aria-labelledby="trial-title">
+  <div class="panel-head">
+    <div>
+      <h2 id="trial-title">Repair order rehearsal</h2>
+      <p>
+        Move repairs earlier or later. Compare both orders over the same repair
+        window.
+      </p>
+    </div>
+    <button class="secondary close">Close</button>
+  </div>
+  <ol id="trial-order"></ol>
+  <button id="trial-run" class="primary">Compare orders</button>
+  <div id="trial-result" aria-live="polite"></div>
+</dialog>

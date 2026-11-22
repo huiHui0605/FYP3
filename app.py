@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from flask import Flask, jsonify, render_template, request, session
 from waitress import serve
 
-from engine import simulate, topology
+from engine import replay_order, simulate, topology
 
 ROOT = Path(__file__).resolve().parent
 PRESETS = [
@@ -97,6 +97,19 @@ def create_app(database=None, secret=None):
     def run():
         _, snapshot = run_input()
         return jsonify(snapshot)
+
+    @app.post("/api/rehearse")
+    def rehearse():
+        body, snapshot = run_input()
+        order = body.get("order")
+        result = snapshot["result"]
+        if (not isinstance(order, list) or len(order) != len(result["repairs"])
+                or any(not isinstance(key, str) for key in order)
+                or sorted(order) != sorted(result["repairs"])):
+            raise ValueError("Use each repair in the recommended portfolio exactly once.")
+        nodes = {node["id"]: node for node in snapshot["nodes"]}
+        trial = replay_order(nodes, result["failures"], order, result["total"])
+        return jsonify(trial)
 
     @app.get("/api/runs")
     def history():

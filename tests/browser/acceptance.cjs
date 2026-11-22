@@ -1,11 +1,16 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
-const { chromium } = require("playwright-core");
+const { chromium, firefox, webkit } = require("playwright-core");
 (async () => {
-  const browser = await chromium.launch({
-    executablePath: process.env.CHROME_BIN || "/usr/bin/chromium",
-    args: ["--no-sandbox"],
-  });
+  const engine = process.env.BROWSER_ENGINE || "chromium";
+  const browser = await { chromium, firefox, webkit }[engine].launch(
+    engine === "chromium"
+      ? {
+          executablePath: process.env.CHROME_BIN || "/usr/bin/chromium",
+          args: ["--no-sandbox"],
+        }
+      : {},
+  );
   try {
     const page = await browser.newPage({
       viewport: { width: 1360, height: 1000 },
@@ -59,6 +64,7 @@ const { chromium } = require("playwright-core");
       /Storm budget 4/,
     );
     await page.getByRole("button", { name: "Edit topology" }).click();
+    await page.getByRole("button", { name: "JSON", exact: true }).click();
     const json = JSON.parse(await page.locator("#model-json").inputValue());
     json[0].requires = [[json[0].id]];
     await page.locator("#model-json").fill(JSON.stringify(json));
@@ -69,6 +75,13 @@ const { chromium } = require("playwright-core");
     await page.getByRole("button", { name: "0–2 h · Solar microgrid" }).click();
     await page.getByText(/At hour 2 · 53.0% available/).waitFor();
     assert.equal(await page.locator(".node.recovered").count(), 5);
+    await page.locator("#rehearse").click();
+    await page
+      .getByRole("button", { name: "Move Grid supply earlier" })
+      .press("Enter");
+    await page.getByRole("button", { name: "Compare orders" }).click();
+    await page.getByText("130 additional lost priority-hours").waitFor();
+    await page.locator("#trial-dialog .close").click();
     await page.locator("#save").click();
     await page.getByText("Scenario saved to the library.").waitFor();
     await page
@@ -118,6 +131,59 @@ const { chromium } = require("playwright-core");
       await page.evaluate(() => document.documentElement.scrollWidth),
       390,
     );
+    await page.reload();
+    await page.locator("#asset-list .node.direct").first().waitFor();
+    assert.equal(
+      await page.locator("#list-view").getAttribute("aria-pressed"),
+      "true",
+    );
+    await page.locator("#map-view").press("Enter");
+    await page.locator("#layers .node.direct").first().waitFor();
+    await page.locator("#model-open").click();
+    await page.getByRole("button", { name: "Add asset", exact: true }).click();
+    await page.getByLabel("Asset name", { exact: true }).fill("Night studio");
+    await page.getByRole("button", { name: "Add dependency group" }).click();
+    await page
+      .getByRole("checkbox", { name: "Core network", exact: true })
+      .check();
+    await page.getByRole("button", { name: "Validate and apply" }).click();
+    await page.getByText("Custom model · 12 nodes").waitFor();
+    assert.equal(
+      await page.locator("#node-asset-1").getAttribute("aria-pressed"),
+      "false",
+    );
+    await page.locator("#list-view").click();
+    await page
+      .locator("#asset-list #node-asset-1")
+      .getByText("Requires Core network")
+      .waitFor();
+    await page.locator("#inspect-node").selectOption("asset-1");
+    await page
+      .locator("#inspection")
+      .getByText("Requires (Core network)")
+      .waitFor();
+
+    // A pre-schedule library entry includes the original topology and scores.
+    const legacy = await page.evaluate(
+      async () => (await (await fetch("/api/runs")).json())[0],
+    );
+    delete legacy.result.schedule;
+    for (const node of legacy.nodes) {
+      delete node.hours;
+      delete node.target_hours;
+    }
+    await page.route("**/api/runs", (route) =>
+      route.fulfill({ json: [legacy] }),
+    );
+    await page.locator("#history-open").click();
+    await page.getByRole("button", { name: "Load", exact: true }).click();
+    await page
+      .getByText("Run this saved scenario again to calculate repair times.")
+      .waitFor();
+    assert.equal(await page.locator("#rehearse").isDisabled(), true);
+    await page.locator("#run").click();
+    await page.getByText(/One crew · 3 repair hours/).waitFor();
+    assert.equal(await page.locator("#rehearse").isEnabled(), true);
     assert.deepEqual(errors, []);
     console.log(
       "Browser acceptance passed: cascade, recovery, save, compare, reload, CSV, validation, mobile width.",

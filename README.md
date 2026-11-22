@@ -31,6 +31,12 @@ Select **Recovery drill** and click the crew milestones. The graph shows the ser
 
 Under **Transfer scenario**, download a JSON file and open it in another browser to reproduce the calculation. CSV includes the crew schedule and deadline results. Previously saved runs retain their original results. Run them again to calculate a schedule using their available assumptions.
 
+## Build and rehearse
+
+Use **Edit topology → Asset builder** to add an asset, assign its priority and repair cost, and choose its upstream sources. Select alternatives within the same dependency group. Each additional group introduces another required condition. The JSON editor uses the same working copy. **Validate and apply** reruns the model and retains faults on surviving assets.
+
+In **Recovery drill**, choose **Try a repair order** and move Grid supply earlier. **Compare orders** overlays both availability curves and reports deadline changes. This trial uses the same asset set, cost and crew hours as the recommendation. It lives in the rehearsal dialog. On small screens the workspace opens with **Asset list**, where every node has a text status and a list of requirements. **Map** restores the diagram.
+
 ## Project documentation
 
 - [Project report](docs/REPORT.md) covers requirements, architecture, the algorithm, evaluation and scope.

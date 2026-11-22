@@ -83,6 +83,19 @@ class ApiTests(unittest.TestCase):
         oversized = dict(self.body, name="a" * 65536)
         self.assertEqual(self.client.post("/api/runs", json=oversized, headers=self.headers).status_code, 413)
 
+    def test_rehearsal_is_independent_and_validated(self):
+        body = dict(self.body, failures=["grid", "solar", "fiber"], budget=17,
+                    order=["grid", "solar", "fiber"])
+        response = self.client.post("/api/rehearse", json=body, headers=self.headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["lost_priority_hours"], 627)
+        self.assertEqual(response.json["hours"], 11)
+        self.assertEqual(response.json["steps"][-1]["online_score"], 100)
+        self.assertEqual(self.client.get("/api/runs").json, [])
+        for invalid in [["grid"], ["grid", "solar", "grid"], ["grid", "fiber", {}], None]:
+            response = self.client.post("/api/rehearse", json=dict(body, order=invalid), headers=self.headers)
+            self.assertEqual(response.status_code, 400)
+
     def test_simulate_save_list_delete_and_isolation(self):
         result = self.client.post("/api/simulate", json=self.body, headers=self.headers).json
         saved = self.client.post("/api/runs", json=self.body, headers=self.headers)

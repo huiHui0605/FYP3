@@ -19,3 +19,7 @@ For an oral defense, walk through the redundant network path, show the cascade t
 2. Click the grid and fiber milestones. Availability advances to 93% at hour 8 and 100% at hour 11. The plan loses 497 priority-hours across the repair window.
 3. Open **Edit recovery assumptions** and change the learning portal deadline to 1 hour. Apply it. The portal now shows a late recovery at hour 2.
 4. Download the scenario under **Transfer scenario**. Open it in a new browser session, verify the same late deadline and save the run. Download the CSV to inspect the repair intervals alongside the deadlines.
+
+## Compare a proposed repair order
+
+Open **Recovery drill → Try a repair order**. Move Grid supply earlier by one position and choose **Compare orders**. Both plans reach full availability at hour 11. The grid-first trial incurs 627 lost priority-hours versus 497 under the recommendation. The learning portal and help desk miss their deadlines in the trial. Inspect the chart and the hour-by-hour comparison table at each completion time, then close the rehearsal to return to the original scenario.

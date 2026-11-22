@@ -100,13 +100,20 @@ def crew_schedule(nodes, failed, repairs, scores, total):
                 candidates.append((loss + lost_during_job, order + (last,)))
             plans[subset] = min(candidates)
 
-    loss, order = plans[jobs]
+    _, order = plans[jobs]
+    return replay_order(nodes, failed, order, total)
+
+
+def replay_order(nodes, failed, order, total):
+    """Evaluate a single crew following the specified repair order."""
+    loss = 0
     remaining_faults = set(failed)
     offline, _, _ = propagate(nodes, remaining_faults)
     restored_at = {key: 0 for key in nodes if key not in offline}
     hour = 0
     steps = []
     for key in order:
+        loss += nodes[key]["hours"] * sum(nodes[k]["weight"] for k in offline)
         start = hour
         hour += nodes[key]["hours"]
         remaining_faults.remove(key)

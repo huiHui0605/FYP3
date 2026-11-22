@@ -69,3 +69,9 @@ The optimal sequence saves 130 priority-hours (20.7%) relative to the specified 
 ## Scope and limitations
 
 The model assumes one crew, fixed costs, deterministic repair durations and successful, uninterrupted jobs. Downstream services recover immediately when their dependencies are satisfied. Site access, travel, shift changes, physical telemetry and multi-crew coordination are outside the simulation. The engine selects a portfolio for final availability first, then sequences that portfolio for minimum weighted downtime. The stated deadlines are evaluation criteria. All weights, durations and deadlines in the demo are synthetic. Workspaces use browser cookies. Portable files transfer the modeled inputs for use in another workspace.
+
+## Operator workspace
+
+The Flask application serves Jinja templates and native browser modules. The builder and rehearsal modules manage their dialog drafts separately from the active scenario. Both JSON editing and the form editor submit to the existing simulation endpoint, so dependency constraints and scoring stay consistent. The optimizer and the rehearsal endpoint share a single crew replay routine for service restoration times, deadlines and cumulative loss.
+
+The map and the compact asset list render the same state for the selected recovery stage. The list exposes upstream requirements as text and opens by default on small screens. The rehearsal curve also has a numeric table covering the union of completion times in both schedules. The acceptance suite exercises keyboard reordering, new asset modeling, mobile layout, invalid dependencies, portable scenarios and reopening an older snapshot that predates scheduling.
