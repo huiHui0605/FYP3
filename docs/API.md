@@ -24,3 +24,9 @@ Simulation returns 200, saving returns 201, and deletion returns 204. Errors inc
 | `CAMPUS_SECURE_COOKIE` | Set to `1` when serving through an HTTPS reverse proxy. |
 
 Use one Waitress process with a writable persistent data directory. For a controlled network demonstration, place it behind an HTTPS reverse proxy and supply a stable signing secret. Protect the database and signing key together when backing up the application.
+
+## Timing and portable scenarios
+
+Each node accepts integer `hours` from 1 to 168 (default 1) and optional integer `target_hours` from 0 to 720 (default null). `result.schedule` contains total crew hours, lost priority-hours over the repair horizon, ordered steps and recovery goals. Each step gives the repaired node, start and finish hours, newly restored nodes and the resulting online priority. For each goal, `actual` is zero for an initially operational node, its restoration hour for a recovered node or null for one still offline. A service returning exactly at its deadline meets the goal.
+
+Portable JSON files contain `format` set to `campus-twin/1`, a scenario name, nodes, failures and budget. Imports validate the model and recompute all results through the simulation API. They contain no session identifiers. Opening a file leaves library persistence to the Save run action. Legacy stored snapshots can be loaded and exported. Rerun a legacy snapshot to calculate timing with the default one-hour durations and unset deadlines.

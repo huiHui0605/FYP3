@@ -32,7 +32,12 @@ def topology(value):
                 not isinstance(item, str) for item in group
             ) or len(set(group)) != len(group):
                 raise ValueError("Each group must contain 1–8 distinct node IDs.")
+        duration = integer(row.get("hours", 1), 1, 168, "Repair hours")
+        target = row.get("target_hours")
+        if target is not None:
+            integer(target, 0, 720, "Recovery target")
         nodes[key] = dict(
+            hours=duration, target_hours=target,
             id=key, name=name.strip(), layer=layer, requires=groups,
             weight=integer(row.get("weight"), 1, 100, "Priority"),
             cost=integer(row.get("cost"), 1, 25, "Repair cost"),
@@ -77,6 +82,52 @@ def propagate(nodes, failed):
     return offline, waves, causes
 
 
+def crew_schedule(nodes, failed, repairs, scores, total):
+    """Minimize lost priority-hours over the selected portfolio's repair horizon.
+
+    For any repaired subset, availability is independent of the order used to
+    reach it. Try each possible last job and reuse the optimal prefix.
+    """
+    jobs = tuple(repairs)
+    plans = {(): (0, ())}
+    for size in range(1, len(jobs) + 1):
+        for subset in combinations(jobs, size):
+            candidates = []
+            for last in subset:
+                previous = tuple(key for key in subset if key != last)
+                loss, order = plans[previous]
+                lost_during_job = (total - scores[previous]) * nodes[last]["hours"]
+                candidates.append((loss + lost_during_job, order + (last,)))
+            plans[subset] = min(candidates)
+
+    loss, order = plans[jobs]
+    remaining_faults = set(failed)
+    offline, _, _ = propagate(nodes, remaining_faults)
+    restored_at = {key: 0 for key in nodes if key not in offline}
+    hour = 0
+    steps = []
+    for key in order:
+        start = hour
+        hour += nodes[key]["hours"]
+        remaining_faults.remove(key)
+        next_offline, _, _ = propagate(nodes, remaining_faults)
+        restored = sorted(offline - next_offline)
+        restored_at.update(dict.fromkeys(restored, hour))
+        steps.append(dict(repair=key, start=start, finish=hour, restored=restored,
+                          online_score=total - sum(nodes[k]["weight"] for k in next_offline)))
+        offline = next_offline
+
+    goals = []
+    for key, node in nodes.items():
+        target = node["target_hours"]
+        if target is None:
+            continue
+        actual = restored_at.get(key)
+        outcome = "unreached" if actual is None else "met" if actual <= target else "late"
+        goals.append(dict(node=key, target=target, actual=actual, outcome=outcome))
+    return dict(hours=hour, lost_priority_hours=loss, steps=steps, goals=goals)
+
+
 def simulate(nodes, failures, budget):
     if not isinstance(failures, list) or len(failures) > 12 or any(
         not isinstance(key, str) or key not in nodes for key in failures
@@ -91,6 +142,7 @@ def simulate(nodes, failures, budget):
 
     offline, waves, causes = propagate(nodes, failures)
     best_by_cost = {0: (score(offline), 0, ())}
+    scores = {(): score(offline)}
     evaluated = 1
     for count in range(1, len(failures) + 1):
         for repaired in combinations(failures, count):
@@ -98,7 +150,8 @@ def simulate(nodes, failures, budget):
             if cost > budget:
                 continue
             remaining, _, _ = propagate(nodes, set(failures).difference(repaired))
-            candidate = (score(remaining), -len(repaired), repaired)
+            scores[repaired] = score(remaining)
+            candidate = (scores[repaired], -len(repaired), repaired)
             previous = best_by_cost.get(cost)
             if previous is None or candidate[:2] > previous[:2] or (
                 candidate[:2] == previous[:2] and repaired < previous[2]
@@ -117,4 +170,5 @@ def simulate(nodes, failures, budget):
         before=score(offline), after=best_score, total=total, repairs=list(repaired),
         recovered=sorted(offline - after), remaining=sorted(after), spent=spent,
         frontier=frontier, evaluated=evaluated,
+        schedule=crew_schedule(nodes, failures, repaired, scores, total),
     )

@@ -1,0 +1,6 @@
+{
+  "name": "campus-twin-browser-tests",
+  "private": true,
+  "scripts": {"test": "node acceptance.cjs"},
+  "devDependencies": {"playwright-core": "1.65.1"}
+}

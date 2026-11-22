@@ -12,3 +12,10 @@
 | 8 | Open the editor and set Grid supply to require itself | The editor reports a dependency cycle and preserves the current model. |
 
 For an oral defense, walk through the redundant network path, show the cascade timeline, compare budgets, and explain why exact subset search catches repairs that become valuable only together. Use the architecture diagram and tests to connect this demonstration to the system requirements.
+
+## Time-based recovery demonstration
+
+1. Select **Recovery drill**. The 17-unit portfolio funds all three repairs. Click **0–2 h · Solar microgrid**. The graph changes to the hour-2 state and the learning portal and student help desk have recovered.
+2. Click the grid and fiber milestones. Availability advances to 93% at hour 8 and 100% at hour 11. The plan loses 497 priority-hours across the repair window.
+3. Open **Edit recovery assumptions** and change the learning portal deadline to 1 hour. Apply it. The portal now shows a late recovery at hour 2.
+4. Download the scenario under **Transfer scenario**. Open it in a new browser session, verify the same late deadline and save the run. Download the CSV to inspect the repair intervals alongside the deadlines.

@@ -16,6 +16,7 @@ from engine import simulate, topology
 ROOT = Path(__file__).resolve().parent
 PRESETS = [
     {"name": "Storm disruption", "failures": ["grid", "solar", "fiber"], "budget": 8},
+    {"name": "Recovery drill", "failures": ["grid", "solar", "fiber"], "budget": 17},
     {"name": "Uplink isolation", "failures": ["fiber", "radio"], "budget": 5},
     {"name": "Maintenance overlap", "failures": ["grid", "identity"], "budget": 10},
 ]

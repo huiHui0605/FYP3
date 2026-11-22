@@ -79,9 +79,17 @@
             <button id="save" class="secondary">Save run</button
             ><button id="export" class="secondary">Export CSV</button>
           </div>
+          <details class="exchange">
+            <summary>Transfer scenario</summary>
+            <p>Move the model, faults and budget between browsers.</p>
+            <button id="download-case" class="secondary">Download JSON</button>
+            <label for="import-case">Open scenario file</label>
+            <input id="import-case" type="file" accept=".json,application/json" />
+          </details>
           <div class="separator"></div>
           <label for="inspect-node">Inspect a node</label
           ><select id="inspect-node"></select>
+          <button id="timing-open" class="secondary">Edit recovery assumptions</button>
           <div id="inspection" aria-live="polite">
             <h3>Node details</h3>
             <p>Select a node to inspect its dependencies.</p>
@@ -113,9 +121,21 @@
               <div id="frontier"></div>
             </div>
           </div>
+          <section class="schedule" aria-labelledby="schedule-title">
+            <h3 id="schedule-title">Crew schedule &amp; recovery goals</h3>
+            <div id="schedule-content" aria-live="polite"></div>
+          </section>
         </section>
       </div>
     </main>
+    <dialog id="timing-dialog" aria-labelledby="timing-title">
+      <div class="panel-head"><div><h2 id="timing-title">Recovery assumptions</h2>
+        <p>Set repair times for one crew. Add a deadline to any service you want to track.</p></div>
+        <button class="secondary close">Close</button></div>
+      <form id="timing-form"><div id="timing-fields"></div>
+        <p id="timing-error" class="dialog-error" role="alert"></p>
+        <button class="primary">Apply and simulate</button></form>
+    </dialog>
     <dialog id="model-dialog">
       <div class="panel-head">
         <div>

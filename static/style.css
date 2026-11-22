@@ -506,3 +506,20 @@ td {
     white-space: normal;
   }
 }
+
+.schedule, .exchange {
+  border-top: 1px solid var(--line);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.schedule p, .exchange p { font-size: .85rem; margin: .5rem 0; }
+.exchange summary { cursor: pointer; }
+#timing-open { margin: .55rem 0; }
+#timing-fields { margin: 1rem 0; }
+#timing-fields input { min-width: 3.8rem; }
+#schedule-content table { margin: .7rem 0; }
+.schedule button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.schedule .milestones { display: flex; flex-wrap: wrap; gap: .45rem; }
+.schedule td:last-child { font-weight: 600; }
+.goal-met { color: var(--accent); }
+.goal-late, .goal-unreached { color: var(--cascade); }

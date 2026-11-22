@@ -42,9 +42,156 @@ function inputs() {
   return {nodes, failures: [...faults], budget: Number($("budget").value)};
 }
 
+function graphStep() {
+  if (!$("stage").value.startsWith("step-")) return null;
+  return Number($("stage").value.slice(5));
+}
+
+function stageChoices() {
+  const selected = $("stage").value;
+  const steps = snapshot?.result.schedule?.steps ?? [];
+  const options = steps.map((step, index) => new Option("Hour " + step.finish, "step-" + index));
+  $("stage").replaceChildren(new Option("After cascade", "cascade"),
+    ...options, new Option("After recovery", "recovery"));
+  if ([...$("stage").options].some((option) => option.value === selected)) $("stage").value = selected;
+}
+
+function schedulePanel() {
+  const panel = $("schedule-content");
+  panel.replaceChildren();
+  const schedule = snapshot?.result.schedule;
+  if (!schedule) {
+    panel.append(element("p", snapshot ? "Run this saved scenario again to calculate repair times." :
+      "Run a simulation to see when services return."));
+    return;
+  }
+  panel.append(element("p", "One crew · " + schedule.hours + " repair hours · " +
+    schedule.lost_priority_hours + " lost priority-hours during repairs."));
+  const milestones = element("div", undefined, "milestones");
+  schedule.steps.forEach((step, index) => {
+    const button = element("button", step.start + "–" + step.finish + " h · " + name(step.repair), "secondary");
+    button.setAttribute("aria-pressed", String(graphStep() === index));
+    button.addEventListener("click", () => {
+      $("stage").value = "step-" + index;
+      graph();
+      schedulePanel();
+      $("schedule-content").querySelectorAll(".milestones button")[index].focus({preventScroll: true});
+    });
+    milestones.append(button);
+  });
+  panel.append(milestones);
+  const current = schedule.steps[graphStep()];
+  if (current) panel.append(element("p", "At hour " + current.finish + " · " +
+    percent(current.online_score, snapshot.result.total) + " available. Services and assets restored: " +
+    (names(current.restored) || "none") + "."));
+  if (!schedule.steps.length) panel.append(element("p", "The selected portfolio contains no repairs."));
+  if (!schedule.goals.length) {
+    panel.append(element("p", "Add a service deadline under Edit recovery assumptions."));
+    return;
+  }
+  const table = element("table");
+  table.createCaption().textContent = "Service recovery deadlines";
+  const header = table.createTHead().insertRow();
+  for (const label of ["Service", "Deadline", "Restored", "Outcome"]) header.append(element("th", label));
+  const body = table.createTBody();
+  for (const goal of schedule.goals) {
+    const row = body.insertRow();
+    row.append(element("td", name(goal.node)), element("td", goal.target + " h"),
+      element("td", goal.actual === null ? "—" : goal.actual + " h"),
+      element("td", {met: "Met", late: "Late", unreached: "Still offline"}[goal.outcome], "goal-" + goal.outcome));
+  }
+  panel.append(table);
+}
+
+function openTiming() {
+  const table = element("table");
+  const header = table.createTHead().insertRow();
+  for (const label of ["Asset", "Repair hours", "Deadline (h)"]) header.append(element("th", label));
+  const body = table.createTBody();
+  for (const node of nodes) {
+    const row = body.insertRow();
+    row.append(element("th", node.name));
+    for (const [field, value, min, max] of [
+      ["hours", node.hours ?? 1, 1, 168], ["target_hours", node.target_hours ?? "", 0, 720],
+    ]) {
+      const input = element("input");
+      input.type = "number";
+      input.name = node.id + "." + field;
+      input.setAttribute("aria-label", node.name + (field === "hours" ? " repair hours" : " deadline"));
+      Object.assign(input, {value, min, max, required: field === "hours"});
+      row.insertCell().append(input);
+    }
+  }
+  $("timing-fields").replaceChildren(table);
+  $("timing-error").textContent = "";
+  $("timing-dialog").showModal();
+}
+
+function applySnapshot(next, label) {
+  nodes = next.nodes;
+  faults = new Set(next.result.failures);
+  snapshot = next;
+  inspected = null;
+  $("budget").value = next.budget;
+  $("stage").value = "cascade";
+  $("model-label").textContent = label + " · " + nodes.length + " nodes";
+  $("preset").value = "";
+  render();
+}
+
+async function applyTiming(event) {
+  event.preventDefault();
+  const submit = event.submitter;
+  submit.disabled = true;
+  try {
+    const fields = new FormData($("timing-form"));
+    const updated = nodes.map((node) => {
+      const target = fields.get(node.id + ".target_hours");
+      return {...node, hours: Number(fields.get(node.id + ".hours")),
+        target_hours: target === "" ? null : Number(target)};
+    });
+    const next = await api("simulate", "POST", {...inputs(), nodes: updated});
+    applySnapshot(next, "Custom model");
+    $("timing-dialog").close();
+    notice("Recovery assumptions applied.");
+  } catch (error) {
+    $("timing-error").textContent = error.message;
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+function downloadFile(content, type, filename) {
+  const url = URL.createObjectURL(new Blob([content], {type}));
+  const link = element("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function portableCase() {
+  return {format: "campus-twin/1", name: $("scenario-name").value.trim() || "Untitled scenario", ...inputs()};
+}
+
+async function importCase(file) {
+  if (file.size > 65536) throw new Error("Scenario files must be 64 KiB or smaller.");
+  const data = JSON.parse(await file.text());
+  if (data?.format !== "campus-twin/1" || typeof data.name !== "string" ||
+      !data.name.trim() || data.name.length > 70) throw new Error("Invalid Campus Twin scenario file.");
+  const next = await api("simulate", "POST", {nodes: data.nodes, failures: data.failures, budget: data.budget});
+  applySnapshot(next, "Imported model");
+  $("scenario-name").value = data.name;
+  notice("Scenario opened and recalculated. Save run to keep it in your library.");
+}
+
 function state(key) {
   const result = snapshot?.result;
   const recovery = result && $("stage").value === "recovery";
+  const step = graphStep();
+  if (step !== null && result?.schedule?.steps.slice(0, step + 1).some((part) => part.restored.includes(key))) {
+    return "recovered";
+  }
   if (recovery && result.recovered.includes(key)) return "recovered";
   if (faults.has(key)) return "direct";
   if ((recovery ? result.remaining : result?.offline)?.includes(key)) return "cascade";
@@ -139,8 +286,9 @@ function inspection() {
     content.push(element("p", node.requires.length
       ? "Requires " + node.requires.map((group) => "(" + group.map(name).join(" or ") + ")").join(" and ")
       : "No upstream dependencies."));
-    for (const group of snapshot?.result.causes[node.id] ?? []) {
-      content.push(element("p", "Blocked by " + names(group)));
+    const causes = snapshot?.result.causes;
+    for (const group of causes && Object.hasOwn(causes, node.id) ? causes[node.id] : []) {
+      content.push(element("p", "Cascade cause · Blocked by " + names(group)));
     }
   } else content.push(element("p", "Select a node to inspect its dependencies."));
   $("inspection").replaceChildren(...content);
@@ -149,8 +297,10 @@ function inspection() {
 const percent = (score, total) => (100 * score / total).toFixed(1) + "%";
 
 function render() {
+  stageChoices();
   graph();
   inspection();
+  schedulePanel();
   $("faults").textContent = faults.size ? "Direct faults · " + names([...faults]) : "No direct faults selected";
   $("budget-value").textContent = $("budget").value + " units";
   $("save").disabled = busy || !snapshot;
@@ -209,14 +359,14 @@ function invalidate() {
 async function guarded(operation) {
   if (busy) return;
   busy = true;
-  $("run").disabled = $("save").disabled = true;
+  $("run").disabled = $("save").disabled = $("import-case").disabled = true;
   try {
     await operation();
   } catch (error) {
     notice(error.message);
   } finally {
     busy = false;
-    $("run").disabled = false;
+    $("run").disabled = $("import-case").disabled = false;
     $("save").disabled = !snapshot;
   }
 }
@@ -261,14 +411,17 @@ function exportCSV() {
       result.remaining.includes(node.id) ? "Offline" : "Operational",
     ]),
   ];
-  const url = URL.createObjectURL(new Blob(
-    [rows.map((row) => row.map(csvCell).join(",")).join("\r\n")], {type: "text/csv;charset=utf-8"}
-  ));
-  const link = element("a");
-  link.href = url;
-  link.download = "campus-twin-scenario.csv";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  if (result.schedule) {
+    const schedule = result.schedule;
+    rows.push([], ["Crew hours", schedule.hours], ["Lost priority-hours during repairs", schedule.lost_priority_hours],
+      ["Repair", "Start hour", "Finish hour", "Availability", "Restored assets"]);
+    for (const step of schedule.steps) rows.push([name(step.repair), step.start, step.finish,
+      percent(step.online_score, result.total), names(step.restored)]);
+    rows.push([], ["Service", "Deadline (hours)", "Restored (hours)", "Outcome"]);
+    for (const goal of schedule.goals) rows.push([name(goal.node), goal.target, goal.actual ?? "", goal.outcome]);
+  }
+  downloadFile(rows.map((row) => row.map(csvCell).join(",")).join("\r\n"),
+    "text/csv;charset=utf-8", "campus-twin-scenario.csv");
 }
 
 async function library() {
@@ -330,7 +483,7 @@ function compare() {
     node.requires.map((group) => [...group].sort().join(",")).sort(),
   ]).sort((left, right) => left[0].localeCompare(right[0])));
   if (signature(a) !== signature(b)) {
-    output.textContent = "Choose scenarios that use the same topology and weights.";
+    output.textContent = "Choose scenarios that use the same topology, costs and priority weights.";
     return;
   }
   const table = element("table");
@@ -343,6 +496,11 @@ function compare() {
   const rows = table.createTBody();
   const metrics = [
     ["Budget", (run) => run.budget],
+    ["Crew hours", (run) => run.result.schedule?.hours ?? "Unmeasured"],
+    ["Deadlines met", (run) => {
+      const goals = run.result.schedule?.goals;
+      return goals?.length ? goals.filter((g) => g.outcome === "met").length + " / " + goals.length : "—";
+    }],
     ["Offline after cascade", (run) => run.result.offline.length],
     ["Before repair", (run) => percent(run.result.before, run.result.total)],
     ["After repair", (run) => percent(run.result.after, run.result.total)],
@@ -351,6 +509,17 @@ function compare() {
       (id) => run.nodes.find((node) => node.id === id).name
     ).join(", ") || "None"],
   ];
+  for (const first of a.nodes) {
+    const other = b.nodes.find((node) => node.id === first.id);
+    for (const [field, label, fallback] of [["hours", "repair hours", 1], ["target_hours", "deadline", null]]) {
+      if ((first[field] ?? fallback) === (other[field] ?? fallback)) continue;
+      metrics.push([first.name + " · " + label, (run) => {
+        const asset = run.nodes.find((node) => node.id === first.id);
+        const value = asset[field] ?? fallback;
+        return value === null ? "Unset" : value + " h";
+      }]);
+    }
+  }
   for (const [label, value] of metrics) {
     const row = rows.insertRow();
     const header = element("th", label);
@@ -376,7 +545,16 @@ async function start() {
   });
   $("clear").addEventListener("click", () => { faults.clear(); invalidate(); });
   $("budget").addEventListener("input", invalidate);
-  $("stage").addEventListener("change", graph);
+  $("stage").addEventListener("change", () => { graph(); schedulePanel(); });
+  $("timing-open").addEventListener("click", openTiming);
+  $("timing-form").addEventListener("submit", applyTiming);
+  $("download-case").addEventListener("click", () => downloadFile(JSON.stringify(portableCase()),
+    "application/json", "campus-twin-scenario.json"));
+  $("import-case").addEventListener("change", async () => {
+    const file = $("import-case").files[0];
+    if (file) await guarded(() => importCase(file));
+    $("import-case").value = "";
+  });
   $("inspect-node").addEventListener("change", () => {
     inspected = $("inspect-node").value;
     inspection();
