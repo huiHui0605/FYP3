@@ -1,0 +1,6 @@
+{% macro icon(name) -%}
+<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="/static/icons.svg#{{ name }}"/></svg>
+{%- endmacro %}
+{% macro icon_button(name, label, id='', extra='') -%}
+<button type="button" {% if id %}id="{{ id }}"{% endif %} class="secondary icon-button {{ extra }}" title="{{ label }}" aria-label="{{ label }}">{{ icon(name) }}</button>
+{%- endmacro %}

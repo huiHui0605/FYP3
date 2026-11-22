@@ -1,4 +1,4 @@
-import { $, element } from "./dom.js";
+import { $, element, icon } from "./dom.js";
 
 function availabilityChart(trial, recommended, result, width) {
   const canvas = element("canvas", undefined, "availability-chart");
@@ -58,7 +58,9 @@ export function setupRehearsal(readSnapshot, evaluate) {
         ["Earlier", -1],
         ["Later", 1],
       ]) {
-        const move = element("button", label, "secondary");
+        const move = element("button", undefined, "secondary icon-button");
+        move.append(icon(offset === -1 ? "up" : "down"));
+        move.title = "Move " + names.get(key) + " " + label.toLowerCase();
         move.setAttribute(
           "aria-label",
           "Move " + names.get(key) + " " + label.toLowerCase(),

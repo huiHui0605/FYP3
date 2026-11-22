@@ -1,3 +1,4 @@
+{% from "ui.html" import icon, icon_button %}
 <!doctype html>
 <html lang="en">
   <head>
@@ -16,21 +17,19 @@
     <a class="skip-link" href="#workspace">Skip to workspace</a>
     <header class="top">
       <div class="brand">
-        <span class="mark" aria-hidden="true">◈</span>
+        <span class="mark" aria-hidden="true">{{ icon("network") }}</span>
         <div>Campus Twin<small>RESILIENCE LAB</small></div>
       </div>
       <nav aria-label="Workspace">
-        <button id="history-open" class="secondary">Scenario library</button
-        ><button id="model-open" class="secondary">Edit topology</button>
+        <button id="history-open" class="secondary">{{ icon("library") }} Scenario library</button
+        ><button id="model-open" class="secondary">{{ icon("edit") }} Edit topology</button>
       </nav>
     </header>
     <main id="workspace" tabindex="-1">
       <div class="intro">
         <div>
           <h1>Resilience workspace</h1>
-          <p>
-            Trace an outage through campus services and plan the order of repairs.
-          </p>
+          <p id="decision-brief" aria-live="polite">Explore service dependencies, then plan your campus recovery.</p>
         </div>
         <span class="tag" id="model-label">Campus model</span>
       </div>
@@ -41,16 +40,20 @@
           <div class="panel-head">
             <div>
               <h2 id="topology-title">Dependency topology</h2>
-              <p>Select nodes to simulate direct outages.</p>
+              <p>Select an asset to inspect its connections or change its fault status.</p>
             </div>
             <button class="secondary" id="clear">Clear faults</button>
           </div>
           <div class="view-bar">
             <div class="view-switch" aria-label="Topology display">
-              <button id="map-view" aria-pressed="true">Map</button>
-              <button id="list-view" aria-pressed="false">Asset list</button>
+              <button id="map-view" aria-pressed="true">{{ icon("network") }} Map</button>
+              <button id="list-view" aria-pressed="false">{{ icon("list") }} Asset list</button>
             </div>
-            <label class="stage">Recovery stage <select id="stage"></select></label>
+            <div class="stage-controls">
+              {{ icon_button("left", "Previous recovery stage", "stage-prev") }}
+              <select id="stage" aria-label="Recovery stage"></select>
+              {{ icon_button("right", "Next recovery stage", "stage-next") }}
+            </div>
           </div>
           <div id="asset-list" hidden></div>
           <div class="graph-wrap" id="map-wrap">
@@ -64,6 +67,12 @@
             ><span><i class="direct"></i>Direct outage</span
             ><span><i class="cascade"></i>Cascade</span
             ><span><i class="recovered"></i>Recovered</span>
+          </div>
+          <div class="inspector">
+            <div class="inspect-head"><label for="inspect-node">Asset inspector</label>
+              <select id="inspect-node"></select></div>
+            <div id="inspection" aria-live="polite"></div>
+            <button id="toggle-fault" class="secondary" hidden></button>
           </div>
         </section>
         <aside class="panel controls">
@@ -80,12 +89,13 @@
           >
           <input id="budget" type="range" min="0" max="50" value="8" />
           <div id="faults"></div>
+          <p id="run-status" class="run-status" role="status"></p>
           <button id="run" class="primary">
-            Run simulation <span aria-hidden="true">→</span>
+            {{ icon("play") }} Run simulation
           </button>
           <div class="actions">
-            <button id="save" class="secondary">Save run</button
-            ><button id="export" class="secondary">Export CSV</button>
+            <button id="save" class="secondary">{{ icon("bookmark") }} Save run</button
+            ><button id="export" class="secondary">{{ icon("download") }} Export CSV</button>
           </div>
           <details class="exchange">
             <summary>Transfer scenario</summary>
@@ -94,16 +104,9 @@
             <label for="import-case">Open scenario file</label>
             <input id="import-case" type="file" accept=".json,application/json" />
           </details>
-          <div class="separator"></div>
-          <label for="inspect-node">Inspect a node</label
-          ><select id="inspect-node"></select>
-          <button id="timing-open" class="secondary">Edit recovery assumptions</button>
-          <div id="inspection" aria-live="polite">
-            <h3>Node details</h3>
-            <p>Select a node to inspect its dependencies.</p>
-          </div>
+          <button id="timing-open" class="secondary">{{ icon("settings") }} Edit recovery assumptions</button>
         </aside>
-        <section class="panel results" aria-labelledby="results-title">
+        <section id="results" class="panel results" aria-labelledby="results-title">
           <div class="panel-head">
             <div>
               <h2 id="results-title">Simulation results</h2>

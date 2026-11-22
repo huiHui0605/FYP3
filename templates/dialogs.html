@@ -1,3 +1,4 @@
+{% from "ui.html" import icon_button %}
 <dialog id="timing-dialog" aria-labelledby="timing-title">
   <div class="panel-head">
     <div>
@@ -7,7 +8,7 @@
         track.
       </p>
     </div>
-    <button class="secondary close">Close</button>
+    {{ icon_button("close", "Close", extra="close") }}
   </div>
   <form id="timing-form">
     <div id="timing-fields"></div>
@@ -21,7 +22,7 @@
       <h2 id="model-title">Topology editor</h2>
       <p>Every dependency group needs at least one operational member.</p>
     </div>
-    <button class="secondary close">Close</button>
+    {{ icon_button("close", "Close", extra="close") }}
   </div>
   <div class="view-switch">
     <button id="builder-view" aria-pressed="true">Asset builder</button>
@@ -44,8 +45,11 @@
       <h2 id="history-title">Scenario library</h2>
       <p>Load a saved run or compare two snapshots of the same model.</p>
     </div>
-    <button class="secondary close">Close</button>
+    {{ icon_button("close", "Close", extra="close") }}
   </div>
+  <label for="history-search">Find a scenario</label>
+  <input id="history-search" type="search" placeholder="Search by name" autocomplete="off">
+  <p id="history-count" role="status"></p>
   <div id="history"></div>
   <button id="compare" class="primary">Compare selected runs</button>
   <div id="comparison"></div>
@@ -59,7 +63,7 @@
         window.
       </p>
     </div>
-    <button class="secondary close">Close</button>
+    {{ icon_button("close", "Close", extra="close") }}
   </div>
   <ol id="trial-order"></ol>
   <button id="trial-run" class="primary">Compare orders</button>

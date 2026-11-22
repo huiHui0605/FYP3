@@ -2,6 +2,8 @@
 
 Campus Twin is a campus infrastructure what-if simulator. Model dependencies with redundant paths, inject direct outages, trace the resulting cascade and find the repair subset that restores the most weighted availability within a fixed budget.
 
+![Campus Twin workspace showing the campus topology, repair recommendation and simulation controls](docs/images/workspace.jpg)
+
 ## Run locally
 
 Requires Python 3.11 or later. From the repository root:
@@ -23,7 +25,9 @@ Open http://127.0.0.1:8000. The sample Storm disruption runs on first load. No e
 2. Change **Graph view** to **After recovery**, then save the run.
 3. Change the budget to 4, name the run “Storm · budget 4”, run and save it. The best plan restores 53% under this cap.
 4. Open **Scenario library**, select both runs and compare them. Close the dialog and export the current scenario as CSV.
-5. Try **Uplink isolation**. Remove one of its two selected faults to see how a redundant path prevents the network cascade. Open **Edit topology** to change the redundancy rules.
+5. Try **Uplink isolation**. Inspect **Radio uplink**, choose **Remove direct fault**, then run the simulation to see how a redundant path prevents the network cascade. Open **Edit topology** to change the redundancy rules.
+
+Select any asset on the map or in the list to inspect its incoming connections and follow the services it directly supports. Choose **Mark as failed** or **Remove direct fault** to edit the scenario. The arrows beside the stage picker step through the recovery plan. The scenario library supports name search and keeps selected runs visible while you find a second run to compare.
 
 ## Recovery drill
 

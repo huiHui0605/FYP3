@@ -8,7 +8,7 @@
 | 4 | Open Scenario library and compare both snapshots | The table shows 88.0% versus 53.0% after repair and different direct repairs. |
 | 5 | Reload the page, open Scenario library and load the 4-unit run | The original model, faults, budget and results reappear. |
 | 6 | Export CSV | The file lists scenario metrics and every node's initial and final status. |
-| 7 | Load Uplink isolation, deselect Radio uplink, then rerun | Fiber is the only offline asset after cascade. The alternate path keeps Core network available. |
+| 7 | Load Uplink isolation, inspect Radio uplink and select Remove direct fault, then rerun | Fiber is the only offline asset after cascade. The alternate path keeps Core network available. |
 | 8 | Open the editor and set Grid supply to require itself | The editor reports a dependency cycle and preserves the current model. |
 
 For an oral defense, walk through the redundant network path, show the cascade timeline, compare budgets, and explain why exact subset search catches repairs that become valuable only together. Use the architecture diagram and tests to connect this demonstration to the system requirements.

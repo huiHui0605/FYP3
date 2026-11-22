@@ -1,4 +1,4 @@
-import { $, element } from "./dom.js";
+import { $, element, icon } from "./dom.js";
 import { setupBuilder } from "./builder.js";
 import { setupRehearsal } from "./rehearsal.js";
 const layers = ["Utilities", "Infrastructure", "Campus services"];
@@ -68,8 +68,7 @@ function schedulePanel() {
     button.setAttribute("aria-pressed", String(graphStep() === index));
     button.addEventListener("click", () => {
       $("stage").value = "step-" + index;
-      graph();
-      schedulePanel();
+      showStage();
       $("schedule-content").querySelectorAll(".milestones button")[index].focus({preventScroll: true});
     });
     milestones.append(button);
@@ -206,7 +205,7 @@ function graph() {
       const button = element("button", undefined, "node " + status);
       button.id = "node-" + node.id;
       button.title = node.name + " · " + status;
-      button.setAttribute("aria-pressed", String(faults.has(node.id)));
+      button.setAttribute("aria-pressed", String(inspected === node.id));
       const info = element("span", undefined, "node-info");
       info.append(element("strong", node.name), element("small", stateLabels[status]));
       if (listView) {
@@ -215,16 +214,7 @@ function graph() {
       }
       button.append(element("i", undefined, status), info);
       button.addEventListener("click", () => {
-        inspected = node.id;
-        if (faults.has(node.id)) faults.delete(node.id);
-        else if (faults.size < 12) faults.add(node.id);
-        else {
-          notice("A scenario supports up to 12 direct outages.");
-          inspection();
-          return;
-        }
-        invalidate();
-        document.getElementById(button.id).focus({preventScroll: true});
+        inspectAsset(node.id, true);
       });
       column.append(button);
     }
@@ -260,8 +250,9 @@ function drawEdges() {
         const y2 = target.top + target.height / 2 - graphBox.top;
         const control = sameLayer ? x1 + 28 : (x1 + x2) / 2;
         const blocked = ["direct", "cascade"].includes(state(key));
-        context.strokeStyle = blocked ? "#b98769" : "#566782";
-        context.lineWidth = blocked ? 1.7 : 1.15;
+        const highlighted = inspected === node.id || inspected === key;
+        context.strokeStyle = highlighted ? "#c3fff1" : blocked ? "#c69a76" : "#72899a";
+        context.lineWidth = highlighted ? 3 : blocked ? 1.7 : 1.15;
         context.setLineDash(group.length > 1 ? [4, 4] : []);
         context.beginPath();
         context.moveTo(x1, y1);
@@ -279,6 +270,26 @@ function drawEdges() {
   }
 }
 
+function inspectAsset(key, focusNode = false) {
+  inspected = key || null;
+  graph();
+  inspection();
+  if (focusNode) $("node-" + key)?.focus({preventScroll: true});
+}
+
+function updateStageControls() {
+  const select = $("stage");
+  $("stage-prev").disabled = !snapshot || select.selectedIndex <= 0;
+  $("stage-next").disabled = !snapshot || select.selectedIndex >= select.options.length - 1;
+}
+
+function showStage() {
+  graph();
+  schedulePanel();
+  inspection();
+  updateStageControls();
+}
+
 function inspection() {
   const node = nodes.find((feature) => feature.id === inspected);
   const select = $("inspect-node");
@@ -286,17 +297,32 @@ function inspection() {
     (item) => new Option(item.name, item.id)
   ));
   select.value = node?.id ?? "";
-  const content = [element("h3", node?.name ?? "Node details")];
+  const content = [];
+  const toggle = $("toggle-fault");
+  toggle.hidden = !node;
   if (node) {
-    content.push(element("p", "Priority " + node.weight + " · repair cost " + node.cost));
+    toggle.textContent = faults.has(node.id) ? "Remove direct fault" : "Mark as failed";
+    content.push(element("p", stateLabels[state(node.id)] + " · Priority " + node.weight +
+      " · Repair cost " + node.cost + " · " + (node.hours ?? 1) + " h"));
     content.push(element("p", node.requires.length
       ? "Requires " + node.requires.map((group) => "(" + group.map(name).join(" or ") + ")").join(" and ")
       : "No upstream dependencies."));
+    const downstream = nodes.filter((item) => item.requires.some((group) => group.includes(node.id)));
+    if (downstream.length) {
+      const links = element("div", undefined, "dependents");
+      links.append(element("span", "Directly supports"));
+      for (const item of downstream) {
+        const link = element("button", item.name, "trace-link");
+        link.onclick = () => inspectAsset(item.id, true);
+        links.append(link);
+      }
+      content.push(links);
+    }
     const causes = snapshot?.result.causes;
     for (const group of causes && Object.hasOwn(causes, node.id) ? causes[node.id] : []) {
       content.push(element("p", "Cascade cause · Blocked by " + names(group)));
     }
-  } else content.push(element("p", "Select a node to inspect its dependencies."));
+  }
   $("inspection").replaceChildren(...content);
 }
 
@@ -314,7 +340,23 @@ function render() {
   $("rehearse").disabled = !(snapshot?.result.schedule?.steps.length >= 2);
   $("rehearse").title = $("rehearse").disabled ? "Run a portfolio with at least two repairs, such as Recovery drill." : "";
   $("stage").disabled = !snapshot;
+  updateStageControls();
+  $("clear").disabled = !faults.size;
+  $("run-status").hidden = Boolean(snapshot);
+  $("run-status").textContent = snapshot ? "" : "Inputs changed. Run the simulation to update results.";
   const result = snapshot?.result;
+  let brief = "Run the updated scenario to see a repair recommendation.";
+  if (result) {
+    if (result.repairs.length) {
+      const restored = result.recovered.length;
+      brief = "Repair " + names(result.repairs) + " to bring " + restored +
+        (restored === 1 ? " asset back online." : " assets back online.");
+    } else {
+      brief = result.offline.length ? "No available repair plan restores services within this budget." :
+        "All assets are operational. Select an asset to try an outage.";
+    }
+  }
+  $("decision-brief").textContent = brief;
   $("metrics").replaceChildren();
   $("waves").replaceChildren();
   $("plan").replaceChildren();
@@ -322,17 +364,19 @@ function render() {
   $("result-note").textContent = result
     ? result.evaluated + " feasible repair combinations evaluated"
     : "Run the simulation to update the results.";
-  if (!result) return;
-  for (const [value, label] of [
-    [result.offline.length, "Offline after cascade"],
-    [percent(result.before, result.total), "Weighted availability"],
-    [percent(result.after, result.total), "After optimal repair"],
-    [result.spent + " / " + snapshot.budget, "Repair units spent"],
+  for (const [value, label, symbol] of [
+    [result?.offline.length, "Offline after cascade", "fault"],
+    [result && percent(result.before, result.total), "Availability after outage", "activity"],
+    [result && percent(result.after, result.total), "After optimal repair", "recovery"],
+    [result && result.spent + " / " + snapshot.budget, "Repair units spent", "budget"],
   ]) {
     const card = element("div", undefined, "metric");
-    card.append(element("b", value), element("span", label));
+    const heading = element("span", label);
+    heading.prepend(icon(symbol));
+    card.append(heading, element("b", value ?? "—"));
     $("metrics").append(card);
   }
+  if (!result) return;
   if (!result.failures.length) $("waves").append(element("p", "No outages in this scenario."));
   else {
     const waveList = element("ul");
@@ -432,14 +476,33 @@ function exportCSV() {
     "text/csv;charset=utf-8", "campus-twin-scenario.csv");
 }
 
+function updateLibraryControls() {
+  const query = $("history-search").value.trim().toLowerCase();
+  const rows = [...$("history").querySelectorAll(".history-row")];
+  const selected = rows.filter((row) => row.querySelector("input").checked).length;
+  let matches = 0;
+  for (const row of rows) {
+    const match = row.dataset.name.includes(query);
+    if (match) matches++;
+    const check = row.querySelector("input");
+    // Keep both selected runs available for deselection while filtering.
+    row.hidden = !match && !check.checked;
+    check.disabled = selected === 2 && !check.checked;
+  }
+  $("compare").disabled = selected !== 2;
+  $("history-count").textContent = rows.length ?
+    matches + (matches === 1 ? " match" : " matches") + " · " + selected + " of 2 selected" : "";
+}
+
 async function library() {
   history = await api("runs");
   $("history").replaceChildren();
   $("comparison").replaceChildren();
-  $("compare").disabled = history.length < 2;
+  $("history-search").value = "";
   if (!history.length) $("history").append(element("p", "Saved scenarios will appear here."));
   for (const record of history) {
     const row = element("div", undefined, "history-row");
+    row.dataset.name = record.name.toLowerCase();
     const label = element("label");
     const checkbox = element("input");
     checkbox.type = "checkbox";
@@ -475,6 +538,7 @@ async function library() {
     row.append(label, load, remove);
     $("history").append(row);
   }
+  updateLibraryControls();
 }
 
 function compare() {
@@ -553,7 +617,14 @@ async function start() {
   });
   $("clear").addEventListener("click", () => { faults.clear(); invalidate(); });
   $("budget").addEventListener("input", invalidate);
-  $("stage").addEventListener("change", () => { graph(); schedulePanel(); });
+  $("stage").addEventListener("change", showStage);
+  for (const [id, offset] of [["stage-prev", -1], ["stage-next", 1]]) {
+    $(id).onclick = () => {
+      $("stage").selectedIndex += offset;
+      showStage();
+      if ($(id).disabled) $("stage").focus();
+    };
+  }
   $("timing-open").addEventListener("click", openTiming);
   $("timing-form").addEventListener("submit", applyTiming);
   $("download-case").addEventListener("click", () => downloadFile(JSON.stringify(portableCase()),
@@ -564,9 +635,16 @@ async function start() {
     $("import-case").value = "";
   });
   $("inspect-node").addEventListener("change", () => {
-    inspected = $("inspect-node").value;
-    inspection();
+    inspectAsset($("inspect-node").value);
   });
+  $("toggle-fault").onclick = () => {
+    if (!inspected) return;
+    if (faults.has(inspected)) faults.delete(inspected);
+    else if (faults.size < 12) faults.add(inspected);
+    else { notice("A scenario supports up to 12 direct outages."); return; }
+    notice("");
+    invalidate();
+  };
   $("run").addEventListener("click", run);
   $("save").addEventListener("click", () => guarded(async () => {
     await api("runs", "POST", {...inputs(), name: $("scenario-name").value});
@@ -594,6 +672,8 @@ async function start() {
       notice(error.message);
     }
   });
+  $("history-search").oninput = updateLibraryControls;
+  $("history").onchange = () => { $("comparison").replaceChildren(); updateLibraryControls(); };
   $("compare").addEventListener("click", compare);
   $("preset").value = "0";
   loadPreset(presets[0]);

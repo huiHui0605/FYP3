@@ -585,3 +585,53 @@ caption { text-align: left; padding: .6rem 0; font-weight: 650; }
 .curve-key { display: flex; flex-wrap: wrap; gap: 1rem; margin: .9rem 0 .3rem; font-size: .8rem; }
 .curve-key span::before { content: ""; display: inline-block; width: 1.5rem; vertical-align: middle; margin-right: .35rem; border-top: 3px solid #985020; }
 .curve-key span:last-child::before { border-top: 2px dashed #006d61; }
+
+/* Operator controls share the same line icons in the workspace and dialogs. */
+.ui-icon {
+  width: 1.05rem; height: 1.05rem; flex: none; vertical-align: middle;
+  fill: none; stroke: currentColor; stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round; pointer-events: none;
+}
+button:has(.ui-icon) { display: inline-flex; align-items: center; justify-content: center; gap: .44rem; }
+.top { background: #102f34; border-bottom: 3px solid #8bd8bc; color: #f2faf6; }
+.top .secondary { background: #1d4145; border-color: #527073; color: #f2faf6; }
+.top .secondary:hover { background: #2e5355; }
+.top .mark { background: #a3e5c5; color: #163d35; }
+.mark .ui-icon { width: 1.5rem; height: 1.5rem; }
+.brand small { color: #b2d9cf; }
+.metrics .metric { flex-direction: column; gap: .48rem; padding: 1rem 1.1rem; }
+.metric span { display: flex; align-items: center; gap: .55rem; color: #385553; }
+.metric span .ui-icon { padding: .3rem; box-sizing: content-box; border-radius: .48rem; background: #e8f2ee; color: #116c5b; }
+.metric:first-child span .ui-icon { background: #f8eaeb; color: #9c3e4a; }
+.metric:nth-child(2) span .ui-icon { background: #e9eff6; color: #48657c; }
+.metric:last-child span .ui-icon { background: #f7efdf; color: #835d27; }
+.icon-button { padding: 0; width: 2.5rem; height: 2.5rem; flex: none; }
+.stage-controls { display: flex; align-items: center; gap: .25rem; min-width: 0; }
+.stage-controls select { width: auto; min-width: 0; font-size: .8rem; }
+.stage-controls .icon-button { width: 2.2rem; height: 2.2rem; }
+.node[aria-pressed="true"] { outline: 2px solid #baf6e6; outline-offset: 2px; }
+.node:focus-visible { outline: 3px solid white; outline-offset: 2px; }
+.inspector { margin-top: .85rem; padding: .85rem; background: #eff5f2; border-radius: .7rem; }
+.inspect-head, .dependents { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.inspect-head label { font-weight: 650; font-size: .86rem; }
+.inspect-head select { width: auto; max-width: 100%; font-size: .84rem; margin-left: auto; }
+.dependents { margin-top: .6rem; font-size: .8rem; }
+.trace-link { border: 1px solid #a9c5bc; border-radius: .45rem; color: #15584c; background: white; padding: .35rem .55rem; }
+#toggle-fault { margin-top: .65rem; background: #fff; }
+#timing-open { width: 100%; margin-top: .9rem; }
+.run-status { background: #faf0d8; color: #704a11; padding: .5rem .65rem; border-radius: .45rem; }
+#trial-order li > strong { min-width: min(12rem, 100%); }
+#trial-order .icon-button { margin-inline: .25rem; }
+button:focus-visible, select:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid #397eb9; outline-offset: 2px; }
+@media (max-width: 650px) {
+  .metric span { align-items: start; }
+  .metrics .metric { padding: .7rem; }
+  .metric span .ui-icon { width: .9rem; height: .9rem; padding: .2rem; }
+  .icon-button, .stage-controls .icon-button { width: 44px; height: 44px; }
+  .top { gap: .5rem; }
+  .inspect-head select { flex: 1 1 8rem; }
+  .controls { grid-row: 1; }
+  .results, .topology { grid-row: auto; }
+}
+#decision-brief { max-width: 72ch; overflow-wrap: anywhere; }
+#history-count { margin-top: .45rem; font-size: .82rem; }
